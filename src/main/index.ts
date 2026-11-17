@@ -40,9 +40,18 @@ function createWindow(): void {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
 
-  mainWindow.on('ready-to-show', () => {
+  // Open the first tab exactly once. `ready-to-show` can fire more than once
+  // (each child WebContentsView that paints can re-trigger it), so guard it —
+  // otherwise every repaint spawns another tab in an endless loop.
+  let firstTabOpened = false
+  const openFirstTab = (): void => {
+    if (firstTabOpened) return
+    firstTabOpened = true
+    tabs?.create()
+  }
+  mainWindow.once('ready-to-show', () => {
     mainWindow?.show()
-    tabs?.create() // open the first tab
+    openFirstTab()
   })
 
   mainWindow.on('closed', () => {
