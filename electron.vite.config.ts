@@ -2,39 +2,38 @@ import { resolve } from 'node:path'
 import { defineConfig } from 'electron-vite'
 import react from '@vitejs/plugin-react'
 
-// electron-vite builds three separate bundles — one per process.
-// Keeping them separate is what lets the main process use Node while the
-// renderer stays sandboxed.
+// Anchor everything to the project root. electron-vite always runs with the
+// project root as cwd, and unlike `__dirname` this is identical whether the
+// config is loaded as CommonJS or ES module — which avoids the
+// "entry point is required" failure that happens when `__dirname` comes
+// through undefined under native-ESM config loading on some setups.
+const root = process.cwd()
+const r = (...p: string[]): string => resolve(root, ...p)
+
+const shared = { alias: { '@shared': r('src/shared') } }
+
 export default defineConfig({
   main: {
     build: {
       outDir: 'out/main',
-      lib: { entry: resolve(__dirname, 'src/main/index.ts') }
+      rollupOptions: { input: { index: r('src/main/index.ts') } }
     },
-    resolve: {
-      alias: { '@shared': resolve(__dirname, 'src/shared') }
-    }
+    resolve: shared
   },
   preload: {
     build: {
       outDir: 'out/preload',
-      lib: { entry: resolve(__dirname, 'src/preload/index.ts') }
+      rollupOptions: { input: { index: r('src/preload/index.ts') } }
     },
-    resolve: {
-      alias: { '@shared': resolve(__dirname, 'src/shared') }
-    }
+    resolve: shared
   },
   renderer: {
     root: 'src/renderer',
     build: {
       outDir: 'out/renderer',
-      rollupOptions: {
-        input: { index: resolve(__dirname, 'src/renderer/index.html') }
-      }
+      rollupOptions: { input: { index: r('src/renderer/index.html') } }
     },
-    resolve: {
-      alias: { '@shared': resolve(__dirname, 'src/shared') }
-    },
+    resolve: shared,
     plugins: [react()]
   }
 })
